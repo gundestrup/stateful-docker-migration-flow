@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 readonly SCRIPT_DIR
 # shellcheck source=lib/platform.sh
-. "${SCRIPT_DIR}/lib/platform.sh"
+. "${SCRIPT_DIR}/platform.sh"
 
 usage() {
   echo "Usage: $0 [--force] [--fresh-anonymous-volumes] [--status-file PATH] [--volume-root PATH] EXPORT_OR_INSPECT.json [OUTPUT_DIR]" >&2

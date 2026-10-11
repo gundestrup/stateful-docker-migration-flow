@@ -91,7 +91,7 @@ doctor -> inventory -> export -> validate -> recreate -> manifest
 
 ## The workflow
 
-1. **Inventory** — `list_containers.sh` shows every container (running
+1. **Inventory** — `lib/list_containers.sh` shows every container (running
    *and* stopped), its Compose project file (if any), and its log driver.
    Containers not managed by Compose get a best-effort `docker run` hint
    for reference.
@@ -124,7 +124,7 @@ doctor -> inventory -> export -> validate -> recreate -> manifest
   and `--next` exports dependency targets before their dependents.
 - Environment values go only into a `600` `.env` file — never to stdout,
   logs, or the manifest.
-- Command-line-rendering suggestions (`container_recreate.sh`) shell-escape
+- Command-line-rendering suggestions (`lib/container_recreate.sh`) shell-escape
   every argument so container metadata can never become executable syntax.
 - Detection failures abort instead of silently passing.
 
@@ -142,7 +142,7 @@ Environment overrides: `SDMF_PLATFORM=synology|truenas|linux`,
 
 ## Input formats
 
-`export_to_compose.sh` auto-detects two inputs:
+`lib/export_to_compose.sh` auto-detects two inputs:
 
 - `docker inspect <container>` JSON (any Docker host)
 - Synology Container Manager container-export JSON (pass `--volume-root
@@ -151,9 +151,10 @@ Environment overrides: `SDMF_PLATFORM=synology|truenas|linux`,
 ## Files
 
 - `sdmf` — menu + non-interactive entry point (all actions above)
-- `list_containers.sh` — inventory table, export orchestration, manifest
-- `export_to_compose.sh` — inspect/Synology-JSON → Compose + env converter
-- `container_recreate.sh` — best-effort `docker run` hint generator
+- `lib/list_containers.sh` — inventory table, export orchestration, manifest
+- `lib/export_to_compose.sh` — inspect/Synology-JSON → Compose + env
+  converter
+- `lib/container_recreate.sh` — best-effort `docker run` hint generator
   (secrets redacted)
 - `lib/platform.sh` — platform detection and runtime/Compose abstraction
 - `tests/` — Docker-based mocked regression suite (same style as
@@ -184,7 +185,7 @@ restart policy intact, `--next` converges when nothing remains.
 
 ## License
 
-AGPL-3.0 — see [LICENSE](LICENSE). `list_containers.sh` and
-`container_recreate.sh` are derived from the MIT-licensed
+AGPL-3.0 — see [LICENSE](LICENSE). `lib/list_containers.sh` and
+`lib/container_recreate.sh` are derived from the MIT-licensed
 [synology-docker](https://github.com/telnetdoogie/synology-docker) project;
 see [NOTICE](NOTICE).

@@ -105,7 +105,7 @@ doctor() {
 }
 
 status() {
-  "${SCRIPT_DIR}/list_containers.sh"
+  "${SCRIPT_DIR}/lib/list_containers.sh"
   echo
   "$DOCKER_BIN" ps -a
 }
@@ -128,7 +128,7 @@ migrate_next() {
 
   local args=(--compose-dir "$root" --container-dirs --next)
   [[ "$fresh" = 'true' ]] && args+=(--fresh-anonymous-volumes)
-  "${SCRIPT_DIR}/list_containers.sh" "${args[@]}"
+  "${SCRIPT_DIR}/lib/list_containers.sh" "${args[@]}"
   printf '\nNext: use the validate action for the generated container output.\n'
 }
 
@@ -150,7 +150,7 @@ export_all() {
 
   local args=(--compose-dir "$root" --container-dirs)
   [[ "$fresh" = 'true' ]] && args+=(--fresh-anonymous-volumes)
-  "${SCRIPT_DIR}/list_containers.sh" "${args[@]}"
+  "${SCRIPT_DIR}/lib/list_containers.sh" "${args[@]}"
 }
 
 compose_file_for() {
@@ -254,7 +254,7 @@ shift
 case "$action" in
   doctor|preflight) doctor "$@" ;;
   status) [[ "$#" -eq 0 ]] || usage; status ;;
-  list) [[ "$#" -eq 0 ]] || usage; "${SCRIPT_DIR}/list_containers.sh" ;;
+  list) [[ "$#" -eq 0 ]] || usage; "${SCRIPT_DIR}/lib/list_containers.sh" ;;
   next) migrate_next "$@" ;;
   export-all) export_all "$@" ;;
   validate) validate_export "$@" ;;

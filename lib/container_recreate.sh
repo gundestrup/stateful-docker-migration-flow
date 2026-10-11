@@ -2,7 +2,7 @@
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 readonly SCRIPT_DIR
 # shellcheck source=lib/platform.sh
-. "${SCRIPT_DIR}/lib/platform.sh"
+. "${SCRIPT_DIR}/platform.sh"
 
 if [[ "$2" == "debug" ]] ; then
   readonly DEBUG=true

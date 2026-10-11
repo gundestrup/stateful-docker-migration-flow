@@ -28,9 +28,12 @@ rules:
       - pattern-either:
           - pattern: source $VAR
           - pattern: . $VAR
-      # Canonical repo idiom: a fixed path relative to the script dir.
+      # Canonical repo idiom: a fixed path relative to the script dir —
+      # "lib/platform.sh" at repo root (sdmf), "platform.sh" inside lib/.
       - pattern-not: . "${SCRIPT_DIR}/lib/platform.sh"
       - pattern-not: source "${SCRIPT_DIR}/lib/platform.sh"
+      - pattern-not: . "${SCRIPT_DIR}/platform.sh"
+      - pattern-not: source "${SCRIPT_DIR}/platform.sh"
     metadata:
       cwe: "CWE-98: File Inclusion"
 

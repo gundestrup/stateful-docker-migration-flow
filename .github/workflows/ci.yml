@@ -47,10 +47,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Bash syntax check
-        run: bash -n ./*.sh lib/*.sh tests/*.sh sdmf
+        run: bash -n lib/*.sh tests/*.sh sdmf
 
       - name: ShellCheck
-        run: shellcheck -x ./*.sh lib/*.sh tests/*.sh sdmf
+        run: shellcheck -x lib/*.sh tests/*.sh sdmf
 
   semgrep:
     name: Semgrep security scan

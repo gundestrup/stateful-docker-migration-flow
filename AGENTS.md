@@ -17,11 +17,16 @@ directly on a NAS.
 
 | File | Role |
 | --- | --- |
-| `sdmf` | Menu + non-interactive entry point (`doctor`, `list`, `next`, `export-all`, `validate`, `recreate`, `compose-recreate`, `manifest`) |
-| `list_containers.sh` | Inventory table, export orchestration, manifest (`compose-export-manifest.json`) |
-| `export_to_compose.sh` | `docker inspect` / Synology-JSON → Compose + env converter |
-| `container_recreate.sh` | Best-effort `docker run` hint (secrets redacted, args shell-escaped) |
+| `sdmf` | Menu + non-interactive entry point (`doctor`, `list`, `next`, `export-all`, `validate`, `recreate`, `compose-recreate`, `manifest`) — the only root-level executable |
+| `lib/list_containers.sh` | Inventory table, export orchestration, manifest (`compose-export-manifest.json`) |
+| `lib/export_to_compose.sh` | `docker inspect` / Synology-JSON → Compose + env converter |
+| `lib/container_recreate.sh` | Best-effort `docker run` hint (secrets redacted, args shell-escaped) |
 | `lib/platform.sh` | Platform detection (`SDMF_PLATFORM`) + runtime/Compose abstraction (`DOCKER_BIN`) |
+
+Implementation scripts live in `lib/` — they are `sdmf` machinery, not the
+interface. They remain runnable standalone (`lib/export_to_compose.sh
+inspect.json outdir`); each resolves `SCRIPT_DIR` to its own directory and
+sources `platform.sh` as a sibling.
 
 ## Commands
 
@@ -35,8 +40,8 @@ docker build -t sdmf-e2e-tests -f tests/Dockerfile.e2e .
 docker run --rm --privileged -v "$PWD:/workspace:ro" sdmf-e2e-tests
 
 # Lint / static analysis (same as CI)
-bash -n ./*.sh lib/*.sh tests/*.sh sdmf
-shellcheck -x ./*.sh lib/*.sh tests/*.sh sdmf
+bash -n lib/*.sh tests/*.sh sdmf
+shellcheck -x lib/*.sh tests/*.sh sdmf
 semgrep scan --config .semgrep.yml --oss-only --metrics off \
   --disable-version-check --error .
 markdownlint-cli2
