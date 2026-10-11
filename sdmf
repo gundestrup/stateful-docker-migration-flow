@@ -1,0 +1,267 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+readonly SCRIPT_DIR
+# shellcheck source=lib/platform.sh
+. "${SCRIPT_DIR}/lib/platform.sh"
+DEFAULT_MIGRATION_ROOT=${MIGRATION_ROOT:-$(sdmf_default_output_root)}
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: sdmf [ACTION]
+
+Actions:
+  doctor                         Check runtime prerequisites and platform
+  status                         Show platform, container status and migration hints
+  list                           List containers, Compose location, and logger
+  next [ROOT] [--fresh-anonymous-volumes]
+                                 Export one remaining unconverted container
+                                 (containers on a removed logger are selected first)
+  export-all [ROOT] [--fresh-anonymous-volumes]
+                                 Export all non-Compose containers
+  validate ROOT CONTAINER        Validate generated Compose output
+  recreate ROOT CONTAINER        Stop, remove, and recreate a container
+  compose-recreate COMPOSE_FILE  Run Compose force-recreate for a project
+  manifest [ROOT]                Show migration manifest status
+  menu                           Show the interactive menu
+
+With no action, the interactive menu is shown.
+
+Environment:
+  MIGRATION_ROOT   Default output directory for generated Compose projects
+  DOCKER_BIN       Container runtime CLI (default: docker; podman planned)
+  SDMF_PLATFORM    Platform override: synology | truenas | linux
+EOF
+  exit 1
+}
+
+fail() {
+  printf 'Error: %s\n' "$1" >&2
+  exit 1
+}
+
+compose() {
+  sdmf_compose "$@"
+}
+
+prompt_default() {
+  local prompt=$1
+  local default=$2
+  local value
+  printf '%s [%s]: ' "$prompt" "$default" >&2
+  read -r value || value=''
+  printf '%s' "${value:-$default}"
+}
+
+prompt_required() {
+  local prompt=$1
+  local value
+  printf '%s: ' "$prompt" >&2
+  read -r value || fail "No value supplied"
+  [[ -n "$value" ]] || fail "No value supplied"
+  printf '%s' "$value"
+}
+
+ask_yes_no() {
+  local prompt=$1
+  local value
+  printf '%s [y/N]: ' "$prompt" >&2
+  read -r value || value=''
+  [[ "$value" =~ ^[Yy][Ee]?[Ss]?$ ]]
+}
+
+confirm_word() {
+  local word=$1
+  local value
+  printf 'Type %s to continue: ' "$word" >&2
+  read -r value || fail "Operation not confirmed"
+  [[ "$value" = "$word" ]] || fail "Operation not confirmed"
+}
+
+doctor() {
+  local platform
+  platform=$(sdmf_detect_platform)
+  printf 'Detected platform: %s\n' "$platform"
+  printf 'Container runtime: %s\n' "$DOCKER_BIN"
+  command -v "$DOCKER_BIN" >/dev/null 2>&1 || fail "Runtime CLI not found: $DOCKER_BIN"
+  if "$DOCKER_BIN" version >/dev/null 2>&1; then
+    printf 'Runtime reachable: yes\n'
+  else
+    fail "Cannot reach the container runtime via '$DOCKER_BIN' (daemon down or insufficient permissions)"
+  fi
+  command -v jq >/dev/null 2>&1 || fail "jq is required for conversion and manifest handling"
+  if "$DOCKER_BIN" compose version >/dev/null 2>&1; then
+    printf 'Compose provider: %s compose\n' "$DOCKER_BIN"
+  elif command -v docker-compose >/dev/null 2>&1; then
+    printf 'Compose provider: docker-compose\n'
+  elif command -v podman-compose >/dev/null 2>&1; then
+    printf 'Compose provider: podman-compose\n'
+  else
+    fail "No Compose provider found ($DOCKER_BIN compose, docker-compose, or podman-compose)"
+  fi
+  printf 'Default migration root: %s\n' "$DEFAULT_MIGRATION_ROOT"
+  printf 'All prerequisites satisfied.\n'
+}
+
+status() {
+  "${SCRIPT_DIR}/list_containers.sh"
+  echo
+  "$DOCKER_BIN" ps -a
+}
+
+migrate_next() {
+  local root=${1:-}
+  shift || true
+  local fresh='false'
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --fresh-anonymous-volumes) fresh='true' ;;
+      *) usage ;;
+    esac
+    shift
+  done
+  [[ -n "$root" ]] || root=$(prompt_default 'Migration output root' "$DEFAULT_MIGRATION_ROOT")
+  if [[ "$fresh" != 'true' ]] && [[ -t 0 ]]; then
+    ask_yes_no 'Replace anonymous volumes with fresh Docker-managed volumes' && fresh='true'
+  fi
+
+  local args=(--compose-dir "$root" --container-dirs --next)
+  [[ "$fresh" = 'true' ]] && args+=(--fresh-anonymous-volumes)
+  "${SCRIPT_DIR}/list_containers.sh" "${args[@]}"
+  printf '\nNext: use the validate action for the generated container output.\n'
+}
+
+export_all() {
+  local root=${1:-}
+  shift || true
+  local fresh='false'
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --fresh-anonymous-volumes) fresh='true' ;;
+      *) usage ;;
+    esac
+    shift
+  done
+  [[ -n "$root" ]] || root=$(prompt_default 'Migration output root' "$DEFAULT_MIGRATION_ROOT")
+  if [[ "$fresh" != 'true' ]] && [[ -t 0 ]]; then
+    ask_yes_no 'Replace anonymous volumes with fresh Docker-managed volumes' && fresh='true'
+  fi
+
+  local args=(--compose-dir "$root" --container-dirs)
+  [[ "$fresh" = 'true' ]] && args+=(--fresh-anonymous-volumes)
+  "${SCRIPT_DIR}/list_containers.sh" "${args[@]}"
+}
+
+compose_file_for() {
+  local root=$1
+  local name=$2
+  local compose_file="${root}/${name}/${name}.docker-compose.yml"
+  if [[ ! -f "$compose_file" ]] && [[ -f "${compose_file}.generated" ]]; then
+    compose_file="${compose_file}.generated"
+  fi
+  printf '%s' "$compose_file"
+}
+
+validate_export() {
+  local root=${1:-}
+  local name=${2:-}
+  [[ -n "$root" ]] || root=$(prompt_default 'Migration output root' "$DEFAULT_MIGRATION_ROOT")
+  [[ -n "$name" ]] || name=$(prompt_required 'Container name')
+  local compose_file
+  compose_file=$(compose_file_for "$root" "$name")
+  [[ -f "$compose_file" ]] || fail "Generated Compose file not found: $compose_file"
+  compose -f "$compose_file" config >/dev/null
+  printf 'Compose configuration is valid: %s\n' "$compose_file"
+}
+
+recreate_export() {
+  local root=${1:-}
+  local name=${2:-}
+  [[ -n "$root" ]] || root=$(prompt_default 'Migration output root' "$DEFAULT_MIGRATION_ROOT")
+  [[ -n "$name" ]] || name=$(prompt_required 'Container name')
+  local compose_file logger
+  compose_file=$(compose_file_for "$root" "$name")
+  [[ -f "$compose_file" ]] || fail "Generated Compose file not found: $compose_file"
+  compose -f "$compose_file" config >/dev/null || fail "Generated Compose configuration is invalid"
+  logger=$("$DOCKER_BIN" inspect "$name" --format '{{.HostConfig.LogConfig.Type}}') || fail "Container not found: $name"
+  printf 'Container %s currently uses logger: %s\n' "$name" "$logger"
+  printf 'This stops and removes the existing container record, not bind-mounted folders or named volumes.\n'
+  confirm_word 'RECREATE'
+  "$DOCKER_BIN" stop "$name"
+  "$DOCKER_BIN" rm "$name"
+  compose -f "$compose_file" up -d --force-recreate
+}
+
+compose_recreate() {
+  local compose_file=${1:-}
+  [[ -n "$compose_file" ]] || compose_file=$(prompt_required 'Compose file path')
+  [[ -f "$compose_file" ]] || fail "Compose file not found: $compose_file"
+  compose -f "$compose_file" config >/dev/null || fail "Compose configuration is invalid"
+  confirm_word 'RECREATE'
+  (cd "$(dirname "$compose_file")" && compose -f "$(basename "$compose_file")" up -d --force-recreate)
+}
+
+show_manifest() {
+  local root=${1:-}
+  [[ -n "$root" ]] || root=$(prompt_default 'Migration output root' "$DEFAULT_MIGRATION_ROOT")
+  local manifest_file="${root}/compose-export-manifest.json"
+  [[ -f "$manifest_file" ]] || fail "Manifest not found: $manifest_file"
+  jq -r '.containers | to_entries[] | "\(.key)\tlogger=\(.value.logger)\trecreate=\(.value.requires_recreate)\t\(.value.conversion)"' "$manifest_file"
+}
+
+menu() {
+  while true; do
+    cat <<MENU
+
+Migrate containers to Compose projects
+Platform: $(sdmf_detect_platform)  Runtime: ${DOCKER_BIN}  Output root: ${DEFAULT_MIGRATION_ROOT}
+Recommended order: doctor -> inventory -> export -> validate -> recreate -> manifest
+ 1) Check prerequisites (doctor)
+ 2) Show container inventory and status
+ 3) Export next container
+ 4) Export all non-Compose containers
+ 5) Validate generated Compose output
+ 6) Recreate generated container
+ 7) Recreate existing Compose project
+ 8) Show migration manifest
+ 0) Exit
+MENU
+    printf 'Select an action: ' >&2
+    read -r choice || return 0
+    case "$choice" in
+      1) doctor ;;
+      2) status ;;
+      3) migrate_next '' ;;
+      4) export_all '' ;;
+      5) validate_export '' '' ;;
+      6) recreate_export '' '' ;;
+      7) compose_recreate '' ;;
+      8) show_manifest '' ;;
+      0) return 0 ;;
+      *) printf 'Unknown action: %s\n' "$choice" >&2 ;;
+    esac
+  done
+}
+
+if [[ "$#" -eq 0 ]]; then
+  menu
+  exit 0
+fi
+
+action=$1
+shift
+case "$action" in
+  doctor|preflight) doctor "$@" ;;
+  status) [[ "$#" -eq 0 ]] || usage; status ;;
+  list) [[ "$#" -eq 0 ]] || usage; "${SCRIPT_DIR}/list_containers.sh" ;;
+  next) migrate_next "$@" ;;
+  export-all) export_all "$@" ;;
+  validate) validate_export "$@" ;;
+  recreate) recreate_export "$@" ;;
+  compose-recreate) compose_recreate "$@" ;;
+  manifest) show_manifest "$@" ;;
+  menu) [[ "$#" -eq 0 ]] || usage; menu ;;
+  -h|--help|help) usage ;;
+  *) usage ;;
+esac

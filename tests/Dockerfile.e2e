@@ -1,0 +1,8 @@
+# End-to-end image: runs a real dockerd (docker-in-docker) and exercises the
+# actual tools unmocked. Requires --privileged at run time.
+FROM docker:28-dind
+
+RUN apk add --no-cache bash jq docker-cli-compose
+
+WORKDIR /workspace
+CMD ["bash", "tests/e2e.sh"]

@@ -1,0 +1,40 @@
+// markdownlint-cli2 configuration — used by CLI and vscode-markdownlint.
+{
+  "config": {
+    "MD013": {
+      "line_length": 120,
+      "tables": false,
+      "code_blocks": false,
+      "headings": false
+    },
+    "MD024": {
+      "siblings_only": true
+    }
+  },
+  "gitignore": true,
+  "globs": [
+    "AGENTS.md",
+    "[Cc][Hh][Aa][Nn][Gg][Ee][Ll][Oo][Gg].md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "DEVIN.md",
+    "DOCUMENTATION.md",
+    "[Rr][Ee][Aa][Dd][Mm][Ee].md",
+    "README.Development.md",
+    "README.developer.md",
+    "README.performance.md",
+    "README.devel*.md",
+    "RELEASE.md",
+    "SECURITY.md",
+    "STYLING.md",
+    "TESTING.md",
+    "WINDSURF.md",
+    ".devin/*.md",
+    ".github/**/*.md"
+  ],
+  "ignores": [
+    "**/node_modules/**",
+    "vendor/**",
+    "coverage/**"
+  ]
+}

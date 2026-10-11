@@ -1,0 +1,58 @@
+# Semgrep configuration — shell (sh/bash) project rules.
+# Copied from engineering-memory/frameworks/shell/semgrep.yml.
+#
+# Run: semgrep scan --config .semgrep.yml --oss-only --metrics off \
+#        --disable-version-check --error .
+#
+# These rules encode the dangerous-dynamic-execution and quoting hazards
+# ShellCheck doesn't flag as errors. tests/ is outside semgrep's default
+# scan scope — tests/run.sh evals a generated `docker run` on purpose to
+# prove container metadata cannot inject commands.
+rules:
+  # Detect use of eval in shell scripts — dangerous dynamic execution.
+  - id: shell-eval-usage
+    languages: [sh, bash]
+    severity: ERROR
+    message: "Use of eval in shell script is dangerous — avoid dynamic execution"
+    pattern: eval $VAR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-95: Code Injection"
+
+  # Detect sourcing of variable file paths — potential file inclusion.
+  - id: shell-source-variable
+    languages: [sh, bash]
+    severity: WARNING
+    message: "Sourcing file from variable — potential file inclusion"
+    patterns:
+      - pattern-either:
+          - pattern: source $VAR
+          - pattern: . $VAR
+      # Canonical repo idiom: a fixed path relative to the script dir.
+      - pattern-not: . "${SCRIPT_DIR}/lib/platform.sh"
+      - pattern-not: source "${SCRIPT_DIR}/lib/platform.sh"
+    metadata:
+      cwe: "CWE-98: File Inclusion"
+
+  # Detect unquoted variable in dangerous command contexts.
+  - id: shell-unquoted-variable-dangerous
+    languages: [sh, bash]
+    severity: ERROR
+    message: "Unquoted variable in command — vulnerable to word splitting and globbing"
+    patterns:
+      - pattern-either:
+          - pattern: rm $VAR
+          - pattern: cp $VAR
+          - pattern: mv $VAR
+          - pattern: cat $VAR
+          - pattern: chmod $VAR
+          - pattern: chown $VAR
+      # Metavariables match quoted expansions too; "$x" cannot word-split.
+      - pattern-not: rm "$X"
+      - pattern-not: cp "$X"
+      - pattern-not: mv "$X"
+      - pattern-not: cat "$X"
+      - pattern-not: chmod "$X"
+      - pattern-not: chown "$X"
+    metadata:
+      cwe: "CWE-78: OS Command Injection"

@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression-tests:
+    name: Docker regression suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build test image
+        run: docker build -t sdmf-tests -f tests/Dockerfile .
+
+      - name: Run regression tests
+        run: docker run --rm -v "$PWD:/workspace:ro" sdmf-tests
+
+  e2e-tests:
+    name: End-to-end migration test (real dockerd)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build e2e image
+        run: docker build -t sdmf-e2e-tests -f tests/Dockerfile.e2e .
+
+      - name: Run end-to-end migration test
+        run: docker run --rm --privileged -v "$PWD:/workspace:ro" sdmf-e2e-tests
+
+  shell-analysis:
+    name: Shell syntax and ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Bash syntax check
+        run: bash -n ./*.sh lib/*.sh tests/*.sh sdmf
+
+      - name: ShellCheck
+        run: shellcheck -x ./*.sh lib/*.sh tests/*.sh sdmf
+
+  semgrep:
+    name: Semgrep security scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Semgrep
+        run: pip3 install --only-binary ":all:" "semgrep==1.176.0"
+
+      - name: Run Semgrep (CE, repo-local rules)
+        run: semgrep scan --config .semgrep.yml --error --oss-only --metrics off --disable-version-check .
+
+  markdownlint:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff
+        with:
+          config: .markdownlint-cli2.jsonc
+          globs: |
+            AGENTS.md
+            [Cc][Hh][Aa][Nn][Gg][Ee][Ll][Oo][Gg].md
+            [Rr][Ee][Aa][Dd][Mm][Ee].md

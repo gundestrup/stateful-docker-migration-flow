@@ -1,0 +1,10 @@
+# Generated migration output
+migration/
+*.generated
+
+# dotenv environment variables file
+.env
+
+# Local filesystem files
+.DS_Store
+/.idea/*

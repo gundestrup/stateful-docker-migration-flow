@@ -1,0 +1,22 @@
+{
+    // ── Per-repo values ──────────────────────────────────────────────
+    // SonarCloud project key: <organization>_<repo-name>.
+    "sonarlint.connectedMode.project": {
+        "connectionId": "gundestrup",
+        "projectKey": "gundestrup_stateful-docker-migration-flow"
+    },
+    "sonarlint.testFilePattern": "{test,tests,spec}/**",
+
+    // ── Semgrep (local Homebrew install) ─────────────────────────────
+    // pro_intrafile MUST stay false: when true the extension spawns
+    // `semgrep lsp --pro`, and --pro was removed from `lsp` in CLI 1.17x —
+    // the language server crash-loops on startup.
+    // Pro RULES still apply automatically via `semgrep login`.
+    // Details: engineering-memory/tools/semgrep.md
+    "semgrep.path": "/opt/homebrew/bin/semgrep",
+    "semgrep.scan.pro_intrafile": false,
+    "semgrep.scan.configuration": [
+        ".semgrep.yml"
+    ],
+    "semgrep.scan.onlyGitDirty": false
+}

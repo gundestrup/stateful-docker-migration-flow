@@ -1,0 +1,190 @@
+# stateful-docker-migration-flow
+
+[![CI](https://github.com/gundestrup/stateful-docker-migration-flow/actions/workflows/ci.yml/badge.svg)](https://github.com/gundestrup/stateful-docker-migration-flow/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](./LICENSE)
+[![Changelog](https://img.shields.io/badge/CHANGELOG-Updated-brightgreen.svg)](./CHANGELOG.md)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gundestrup/stateful-docker-migration-flow)
+[![CodeFactor](https://www.codefactor.io/repository/github/gundestrup/stateful-docker-migration-flow/badge)](https://www.codefactor.io/repository/github/gundestrup/stateful-docker-migration-flow)
+[![Semgrep CE](https://img.shields.io/badge/Semgrep_CE-security-success)](./.semgrep.yml)
+
+Safely migrate existing Docker containers — created by a vendor UI, `docker
+run`, or other tooling — into reviewed, per-container **Docker Compose**
+projects, without data loss.
+
+Generated output is a standard `docker-compose.yml` + `.env` per container,
+laid out as one directory per stack. That layout drops straight into
+Compose-aware managers such as **Dockge**, **dockhand**, **Arcane**,
+**Komodo**, and plain `docker compose` on the CLI.
+
+> Generated files are **candidates for review**, not blind automation. The
+> tool never overwrites a file you have edited without producing a
+> `*.generated` diff first, never prints environment values to the terminal
+> or manifest, and requires a typed `RECREATE` confirmation before it stops
+> and removes an existing container record.
+
+## Why this exists
+
+Tools like [docker-autocompose](https://github.com/Red5d/docker-autocompose),
+[composerize](https://github.com/composerize/composerize), and
+[composeverter](https://github.com/outilslibre/composeverter) solve adjacent
+problems, but leave a gap for a *safe migration workflow*:
+
+- **autocompose** inspects running containers like this tool does, but dumps
+  everything into a single file, runs as a Python/Docker image, and has no
+  review/candidate/manifest workflow, no per-stack layout, and no safe
+  re-run semantics.
+- **composerize** converts a *`docker run` command line* into Compose YAML.
+  It cannot see a container that was created by a NAS UI or another tool —
+  there is no command line to parse.
+- **composeverter** converts between Compose file *versions*, not live
+  containers into Compose.
+
+What we learned from them, applied here:
+
+- Inspect-based generation (autocompose's approach) is the only way to
+  capture how a container was *actually* created — required for vendor-UI
+  containers.
+- Generated Compose must be treated as a best-effort draft;
+  composerize/autocompose users hit the same imperfect-conversion edge
+  cases. Hence: candidate files, diffs, `compose config` validation, and
+  typed confirmation instead of silent cut-over.
+- Portainer-managed containers need care (the
+  [synology-docker review](https://github.com/telnetdoogie-labs/synology-docker/pull/107)
+  that inspired this project raised it): a container labeled as
+  Compose-managed whose project file is missing on the host is flagged
+  `maybe_managed_by_portainer` and is never converted — Portainer stacks
+  store their Compose file inside Portainer's own data directory.
+- The [SynoForum autocompose thread](https://www.synoforum.com/threads/docker-autocompose.4644/)
+  captures the real-world failure modes: `docker ps`-only export loops miss
+  stopped containers (our inventory includes them), Compose project-name
+  prefixing silently renames volumes and networks (hence `external: true`
+  on generated output), and NordVPN→privoxy-style startup ordering — a
+  container sharing another's network namespace
+  (`network_mode: container:X`) can only run while its dependency does.
+  Those get a `NOTE:` in the inventory, a `network_dependency` entry in the
+  manifest, and `--next` exports the dependency target first.
+
+## Requirements
+
+- `bash`, `jq`, `docker` (or another runtime via `DOCKER_BIN`), and a
+  Compose provider (`docker compose`, `docker-compose`, or `podman-compose`)
+- No Python, no containers-in-containers: the tool is plain Bash + `jq` so
+  it runs directly on a NAS.
+
+## Quick start
+
+```bash
+./sdmf            # interactive menu (recommended)
+./sdmf doctor     # check platform, runtime, jq, compose provider
+./sdmf list       # inventory: container, compose location, logger
+./sdmf next       # export ONE remaining unconverted container
+./sdmf validate /path/to/root my-container
+./sdmf recreate /path/to/root my-container   # typed RECREATE required
+./sdmf manifest   # show conversion state per container
+```
+
+The menu prints the recommended order at every step:
+
+```text
+doctor -> inventory -> export -> validate -> recreate -> manifest
+```
+
+## The workflow
+
+1. **Inventory** — `list_containers.sh` shows every container (running
+   *and* stopped), its Compose project file (if any), and its log driver.
+   Containers not managed by Compose get a best-effort `docker run` hint
+   for reference.
+2. **Export** — `next` converts one container per run (removed-logger
+   containers such as Synology's `db` are selected first), or `export-all`
+   converts every non-Compose container. Each produces
+   `ROOT/<name>/<name>.docker-compose.yml` and a private
+   `ROOT/<name>/<name>.env` (mode `600`).
+3. **Validate** — runs `compose config` against the generated file.
+4. **Recreate** — after you type `RECREATE`, the old container is stopped,
+   removed, and recreated by Compose. Bind-mounted folders and named
+   volumes are untouched.
+5. **Track** — a private `compose-export-manifest.json` (mode `600`)
+   records each container's logger and conversion state (`pending`,
+   `written`, `candidate-generated`, `already-converted`,
+   `compose-managed`, `pending-compose-recreate`, `conversion-failed`).
+   Re-runs are safe: unchanged output is reported as `Already converted`;
+   edited output produces `*.generated` candidates and a diff instead of
+   an overwrite.
+
+## Safety properties
+
+- Named volumes are emitted as `external: true` — they are **reused**,
+  never recreated.
+- Anonymous volumes are preserved by default; `--fresh-anonymous-volumes`
+  opts into replacing them.
+- Containers sharing another's network namespace
+  (`network_mode: container:X`) keep that mode in the generated file; the
+  inventory warns that the dependency must be migrated and started first,
+  and `--next` exports dependency targets before their dependents.
+- Environment values go only into a `600` `.env` file — never to stdout,
+  logs, or the manifest.
+- Command-line-rendering suggestions (`container_recreate.sh`) shell-escape
+  every argument so container metadata can never become executable syntax.
+- Detection failures abort instead of silently passing.
+
+## Platforms
+
+| Platform | Status | Volume root default |
+| --- | --- | --- |
+| Synology DSM | supported (incl. Container Manager JSON exports) | `/volume1` |
+| TrueNAS SCALE | planned; override via `SDMF_PLATFORM=truenas` | `/mnt` |
+| Generic Linux | works for `docker inspect` input | `/` |
+| Podman (e.g. Cockpit) | planned; runtime CLI overridable via `DOCKER_BIN` | — |
+
+Environment overrides: `SDMF_PLATFORM=synology|truenas|linux`,
+`DOCKER_BIN=docker`, `MIGRATION_ROOT=<dir>`.
+
+## Input formats
+
+`export_to_compose.sh` auto-detects two inputs:
+
+- `docker inspect <container>` JSON (any Docker host)
+- Synology Container Manager container-export JSON (pass `--volume-root
+  /volumeN` when data is not under `/volume1`)
+
+## Files
+
+- `sdmf` — menu + non-interactive entry point (all actions above)
+- `list_containers.sh` — inventory table, export orchestration, manifest
+- `export_to_compose.sh` — inspect/Synology-JSON → Compose + env converter
+- `container_recreate.sh` — best-effort `docker run` hint generator
+  (secrets redacted)
+- `lib/platform.sh` — platform detection and runtime/Compose abstraction
+- `tests/` — Docker-based mocked regression suite (same style as
+  synology-docker)
+
+## Tests
+
+Mocked regression suite (fast, no daemon needed):
+
+```bash
+docker build -t sdmf-tests -f tests/Dockerfile .
+docker run --rm -v "$PWD:/workspace:ro" sdmf-tests
+```
+
+End-to-end suite — a real `dockerd` inside a privileged container creates a
+fixture container, rewrites its `hostconfig.json` to the removed `db` logger
+(the exact broken state after a Synology Docker upgrade), then runs the tools
+**unmocked** and asserts data survives (`tests/e2e.sh`):
+
+```bash
+docker build -t sdmf-e2e-tests -f tests/Dockerfile.e2e .
+docker run --rm --privileged -v "$PWD:/workspace:ro" sdmf-e2e-tests
+```
+
+Verified in e2e: the `db` container cannot start → export → `RECREATE` →
+`local` logger, Compose-managed, running, named volume + bind mount + env +
+restart policy intact, `--next` converges when nothing remains.
+
+## License
+
+AGPL-3.0 — see [LICENSE](LICENSE). `list_containers.sh` and
+`container_recreate.sh` are derived from the MIT-licensed
+[synology-docker](https://github.com/telnetdoogie/synology-docker) project;
+see [NOTICE](NOTICE).

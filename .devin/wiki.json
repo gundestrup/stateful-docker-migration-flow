@@ -1,0 +1,31 @@
+{
+  "repo_notes": [
+    { "content": "Bash + jq toolchain that migrates Docker containers created by vendor UIs (Synology Container Manager), docker run, or other tooling into reviewed per-container Docker Compose projects without data loss. Extracted from gundestrup/synology-docker. Repo: https://github.com/gundestrup/stateful-docker-migration-flow" },
+    { "content": "Safety invariants the wiki must get right: named volumes and networks are emitted 'external: true' (reused, never recreated), environment values go only into a mode-600 .env file (never stdout or the manifest), edited output is never overwritten (*.generated candidates plus a diff), and a typed RECREATE confirmation is required before docker stop/rm — rm is never invoked with -v." },
+    { "content": "Entry point is 'sdmf' (interactive menu + non-interactive subcommands). list_containers.sh = inventory, export orchestration, and the private compose-export-manifest.json; export_to_compose.sh = docker-inspect / Synology-JSON to Compose+env converter; container_recreate.sh = best-effort docker run hint with secrets redacted; lib/platform.sh = synology/truenas/linux detection and runtime/compose abstraction (SDMF_PLATFORM, DOCKER_BIN)." },
+    { "content": "Two test tiers: tests/run.sh mocked regression suite (Debian + jq image, stubbed docker CLI) and tests/e2e.sh on docker:dind which runs a real dockerd, simulates Synology's removed 'db' logger by rewriting hostconfig.json, and asserts named-volume, bind-mount, env, and restart-policy data survive migration." },
+    { "content": "See AGENTS.md for full project context, conventions, and quality gates." }
+  ],
+  "pages": [
+    {
+      "title": "Architecture Overview",
+      "purpose": "The sdmf entry point, the four scripts and lib/platform.sh, and the inventory -> export -> validate -> recreate -> manifest pipeline",
+      "page_notes": [{ "content": "Include a Mermaid diagram of the migration flow: inspect -> candidate files -> compose config validation -> typed RECREATE -> compose up" }]
+    },
+    {
+      "title": "Safety Model",
+      "purpose": "The no-data-loss invariants: external volumes, private env/manifest, candidate diffs, typed confirmation, Portainer exclusion, network-namespace dependency ordering",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "Input Formats and Platform Support",
+      "purpose": "docker inspect vs Synology Container Manager JSON, --volume-root, SDMF_PLATFORM/DOCKER_BIN overrides, generated per-stack layout for Dockge/dockhand/Arcane/Komodo/Portainer/Cockpit",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "Testing",
+      "purpose": "Mocked regression suite vs real-dockerd e2e suite, the db-logger simulation, and what each tier asserts",
+      "parent": "Architecture Overview"
+    }
+  ]
+}
