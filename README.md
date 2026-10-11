@@ -22,6 +22,37 @@ Compose-aware managers such as **Dockge**, **dockhand**, **Arcane**,
 > or manifest, and requires a typed `RECREATE` confirmation before it stops
 > and removes an existing container record.
 
+## Warning — read before use
+
+> [!WARNING]
+> This tool stops and removes live containers and changes how they are
+> managed. That is inherently risky: a misconfiguration, a platform quirk,
+> or a bug can leave a container down — or in the worst case, its data
+> inaccessible. The safety invariants are engineered and e2e-tested, but
+> no test suite covers your specific NAS.
+
+Before you migrate anything:
+
+- **Make backups.** Snapshot or copy named volumes and bind-mounted config
+  directories first (DSM snapshots, `docker volume` backup, or your normal
+  backup tool). Generated Compose files are designed to *reuse* volumes,
+  never recreate them — but a backup is the only real safety net if
+  something goes wrong anyway.
+- **Review before you recreate.** Read the generated Compose file, run
+  `sdmf validate`, and only then type `RECREATE`. A stopped container is
+  downtime even when everything works.
+- **Start with a throwaway container.** `sdmf next` migrates exactly one
+  container per run — prove the flow on something non-critical first.
+- **On Synology DSM:** recreated containers become plain Docker/Compose
+  objects. Container Manager may display them differently and its original
+  project entry can remain — cosmetic, but know it before you start.
+
+**Disclaimer:** this software is provided "as is", without warranty of any
+kind — see [LICENSE](LICENSE) (AGPL-3.0, §15 Disclaimer of Warranty and
+§16 Limitation of Liability). You use it entirely at your own risk; the
+authors and contributors are not liable for data loss, downtime, or any
+other damage. If that is not acceptable, do not run it.
+
 ## Why this exists
 
 Tools like [docker-autocompose](https://github.com/Red5d/docker-autocompose),
