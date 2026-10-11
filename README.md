@@ -47,7 +47,16 @@ Before you migrate anything:
   objects. Container Manager may display them differently and its original
   project entry can remain — cosmetic, but know it before you start.
 
-**Disclaimer** — verbatim from [LICENSE](LICENSE) (AGPL-3.0, §15–16):
+**Disclaimer:** this tool is provided in good faith, but the authors make
+no representation or warranty of any kind, express or implied, regarding
+its accuracy, adequacy, validity, reliability, or fitness for any purpose.
+Under no circumstance shall the authors or contributors have any liability
+to you for any loss or damage — including data loss, container downtime,
+or broken services — incurred as a result of using this tool or relying on
+its output. Your use of the tool, and your reliance on anything it
+generates, is solely at your own risk.
+
+The governing text, verbatim from [LICENSE](LICENSE) (AGPL-3.0, §15–16):
 
 > THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
 > APPLICABLE LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
