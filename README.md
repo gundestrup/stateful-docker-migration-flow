@@ -190,12 +190,27 @@ doctor -> inventory -> export -> validate -> recreate -> manifest
 | Platform | Status | Volume root default |
 | --- | --- | --- |
 | Synology DSM | supported (incl. Container Manager JSON exports) | `/volume1` |
-| TrueNAS SCALE | planned; override via `SDMF_PLATFORM=truenas` | `/mnt` |
+| TrueNAS SCALE | detection + path defaults only — untested; native "Convert to custom app" already covers catalog apps | `/mnt` |
 | Generic Linux | works for `docker inspect` input | `/` |
 | Podman (e.g. Cockpit) | planned; runtime CLI overridable via `DOCKER_BIN` | — |
 
 Environment overrides: `SDMF_PLATFORM=synology|truenas|linux`,
 `DOCKER_BIN=docker`, `MIGRATION_ROOT=<dir>`.
+
+> [!NOTE]
+> **Test coverage.** The e2e suite exercises the full flow against a real
+> `dockerd` (the generic-Linux path) and *simulates* Synology detection
+> via marker files. TrueNAS and Podman are covered only by detection,
+> path-default, and mocked-CLI tests — the tool has not been run on real
+> DSM or TrueNAS SCALE systems. Field-test on a throwaway container
+> before trusting it on a new platform.
+
+On TrueNAS specifically, note that SCALE 24.10+ already ships **Convert
+to custom app** (catalog app → editable YAML app) and **Install via
+YAML** (paste a Compose file). sdmf's niche there is narrower:
+containers created *outside* the Apps system — raw `docker run` or
+external tooling — which TrueNAS has no built-in converter for.
+Generated Compose can be imported via *Install via YAML*.
 
 ## Input formats
 
@@ -216,6 +231,10 @@ Environment overrides: `SDMF_PLATFORM=synology|truenas|linux`,
 - `lib/platform.sh` — platform detection and runtime/Compose abstraction
 - `tests/` — Docker-based mocked regression suite (same style as
   synology-docker)
+- `README.architecture.md` — internals: pipeline, manifest, safety
+  invariants, test harness
+- `README.devel.md` — contributor guide: platform, runtime, and
+  input-format adapter seams
 
 ## Tests
 
