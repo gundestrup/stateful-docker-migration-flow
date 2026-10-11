@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.0.1-alpha — 2026-10-11
+
 Initial standalone release, extracted from the
 [synology-docker](https://github.com/telnetdoogie-labs/synology-docker/pull/107)
 recovery tooling at the upstream reviewer's suggestion.
@@ -22,7 +24,8 @@ recovery tooling at the upstream reviewer's suggestion.
   Compose `cgroup`, `uts`, and `userns_mode` fields.
 - Added `sdmf` as a single guided menu/non-interactive entry point for
   prerequisite checks, inventory, export, validation, explicitly confirmed
-  recreation, and manifest review.
+  recreation, and manifest review; implementation scripts live in `lib/`
+  and remain runnable standalone.
 - Redacted container environment values from recreate suggestions, required
   an operator-supplied env file, preserved explicit port bind IPs,
   read-only/named mounts, TTY settings, restart policy, network mode, and
@@ -55,3 +58,8 @@ recovery tooling at the upstream reviewer's suggestion.
   Portainer-labeled fixtures.
 - Added GitHub Actions CI for the Docker regression suite, Bash syntax
   checks, ShellCheck, Semgrep (CE, repo-local rules), and markdownlint.
+- Added architecture and development documentation
+  (`README.architecture.md`, `README.devel.md`) covering the pipeline,
+  safety invariants, test harness, and adapter seams for new platforms,
+  runtimes, and export formats; documented platform test-coverage limits
+  (TrueNAS/Podman untested on real hardware).
