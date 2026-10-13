@@ -33,6 +33,18 @@ jobs:
             kcov --include-path=/workspace --exclude-path=/workspace/tests \
               /coverage /workspace/tests/run.sh
           cp coverage/*/cobertura.xml coverage-regression.xml
+          cp coverage/*/sonarqube.xml coverage-sonar.xml
+          # kcov records container paths; make them repo-relative so the
+          # Sonar scanner can match them to sonar.sources.
+          sed -i 's|/workspace/||g' coverage-sonar.xml
+
+      - name: Upload Sonar coverage report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sonar-coverage
+          path: coverage-sonar.xml
+          if-no-files-found: error
+          retention-days: 5
 
       - name: Upload coverage to Codecov
         if: hashFiles('coverage-regression.xml') != ''
@@ -81,6 +93,28 @@ jobs:
 
       - name: Run Semgrep (CE, repo-local rules)
         run: semgrep scan --config .semgrep.yml --error --oss-only --metrics off --disable-version-check .
+
+  sonar:
+    name: SonarCloud
+    needs: regression-tests
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Download coverage report
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sonar-coverage
+
+      # Self-skips until SONAR_TOKEN is added to the repository secrets.
+      - name: SonarCloud scan
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
 
   markdownlint:
     name: Markdown Lint
