@@ -8,3 +8,7 @@ migration/
 # Local filesystem files
 .DS_Store
 /.idea/*
+
+# kcov coverage output
+coverage/
+coverage-*.xml

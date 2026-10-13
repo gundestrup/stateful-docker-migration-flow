@@ -39,6 +39,14 @@ docker run --rm -v "$PWD:/workspace:ro" sdmf-tests
 docker build -t sdmf-e2e-tests -f tests/Dockerfile.e2e .
 docker run --rm --privileged -v "$PWD:/workspace:ro" sdmf-e2e-tests
 
+# Regression suite with Bash line coverage (cobertura XML → coverage/)
+mkdir -p coverage
+docker run --rm --cap-add SYS_PTRACE \
+  --security-opt seccomp=unconfined \
+  -v "$PWD:/workspace:ro" -v "$PWD/coverage:/coverage" sdmf-tests \
+  kcov --include-path=/workspace --exclude-path=/workspace/tests \
+    /coverage /workspace/tests/run.sh
+
 # Lint / static analysis (same as CI)
 bash -n lib/*.sh tests/*.sh sdmf
 shellcheck -x lib/*.sh tests/*.sh sdmf
@@ -91,3 +99,7 @@ markdownlint-cli2
 - `tests/run.sh` deliberately `eval`s a generated `docker run` hint to
   prove env values cannot inject commands — semgrep's default scope
   skips `tests/`; if scanned explicitly it is suppressed inline.
+- kcov (regression suite only) must take the *script* as its in-file —
+  `kcov out bash tests/run.sh` traces the interpreter binary and records
+  nothing. It needs `SYS_PTRACE` + `seccomp=unconfined`, and the e2e
+  suite is deliberately uninstrumented (dockerd under ptrace in dind).

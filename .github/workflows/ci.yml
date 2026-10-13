@@ -23,8 +23,25 @@ jobs:
       - name: Build test image
         run: docker build -t sdmf-tests -f tests/Dockerfile .
 
-      - name: Run regression tests
-        run: docker run --rm -v "$PWD:/workspace:ro" sdmf-tests
+      - name: Run regression tests (with kcov coverage)
+        run: |
+          mkdir -p coverage
+          docker run --rm \
+            --cap-add SYS_PTRACE --security-opt seccomp=unconfined \
+            -v "$PWD:/workspace:ro" -v "$PWD/coverage:/coverage" \
+            sdmf-tests \
+            kcov --include-path=/workspace --exclude-path=/workspace/tests \
+              /coverage /workspace/tests/run.sh
+          cp coverage/*/cobertura.xml coverage-regression.xml
+
+      - name: Upload coverage to Codecov
+        if: hashFiles('coverage-regression.xml') != ''
+        uses: codecov/codecov-action@af09b5e394c93991b95a5e7646aeb90c1917f78f # v5.5.1
+        with:
+          files: ./coverage-regression.xml
+          disable_search: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
   e2e-tests:
     name: End-to-end migration test (real dockerd)

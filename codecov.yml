@@ -1,0 +1,29 @@
+# Codecov configuration for sdmf
+# https://docs.codecov.com/docs/codecovyml-reference
+#
+# Coverage is informational only — it never blocks CI. Reported by kcov
+# from the mocked regression suite (the e2e suite is not instrumented).
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
+    patch:
+      default:
+        target: auto
+        threshold: 10%
+        informational: true
+
+comment:
+  layout: "condensed_header, diff, flags, components, files"
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Test harness and generated artifacts are not production code.
+ignore:
+  - "tests/**"
+  - "coverage/**"

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added informational Bash line-coverage reporting: the mocked regression
+  suite runs under kcov in CI and uploads a cobertura report to Codecov
+  (never blocks CI). The e2e suite is deliberately uninstrumented.
+
 ## 0.0.1-alpha — 2026-10-11
 
 Initial standalone release, extracted from the
