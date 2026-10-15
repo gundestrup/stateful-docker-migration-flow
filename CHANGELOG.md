@@ -4,7 +4,11 @@
 
 ### Changed
 
-- CI: Semgrep moved from an inline `pip3 install semgrep==1.176.0` pin to hashed `.github/requirements-ci.txt` (compiled from `requirements-ci.in`, Python 3.12), installed with `--require-hashes`. Bumped Semgrep to 1.180.0; the version is now Dependabot-visible via a new `pip` ecosystem entry for `/.github`.
+- CI: Semgrep moved from an inline `pip3 install semgrep==1.176.0` pin
+  to hashed `.github/requirements-ci.txt` (compiled from
+  `requirements-ci.in`, Python 3.12), installed with `--require-hashes`.
+  Bumped Semgrep to 1.180.0; the version is now Dependabot-visible via
+  a new `pip` ecosystem entry for `/.github`.
 - Added informational Bash line-coverage reporting: the mocked regression
   suite runs under kcov in CI and uploads a cobertura report to Codecov
   (never blocks CI). The e2e suite is deliberately uninstrumented.
