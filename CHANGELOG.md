@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Updated the privileged end-to-end test image from Docker 28 to Docker 29.
 - CI: Semgrep moved from an inline `pip3 install semgrep==1.176.0` pin
   to hashed `.github/requirements-ci.txt` (compiled from
   `requirements-ci.in`, Python 3.12), installed with `--require-hashes`.

@@ -1,6 +1,6 @@
 # End-to-end image: runs a real dockerd (docker-in-docker) and exercises the
 # actual tools unmocked. Requires --privileged at run time.
-FROM docker:28-dind
+FROM docker:29-dind
 
 RUN apk add --no-cache bash jq docker-cli-compose
 
