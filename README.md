@@ -4,7 +4,9 @@
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](./LICENSE)
 [![codecov](https://codecov.io/gh/gundestrup/stateful-docker-migration-flow/branch/main/graph/badge.svg)](https://codecov.io/gh/gundestrup/stateful-docker-migration-flow)
 [![Changelog](https://img.shields.io/badge/CHANGELOG-Updated-brightgreen.svg)](./CHANGELOG.md)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gundestrup/stateful-docker-migration-flow)
+<!-- markdownlint-disable MD033 -->
+[<img src="https://devin.ai/assets/askdeepwiki.png" alt="Ask DeepWiki" height="20"/>](https://deepwiki.com/gundestrup/stateful-docker-migration-flow)
+<!-- markdownlint-enable MD033 -->
 [![CodeFactor](https://www.codefactor.io/repository/github/gundestrup/stateful-docker-migration-flow/badge)](https://www.codefactor.io/repository/github/gundestrup/stateful-docker-migration-flow)
 [![Semgrep CE](https://img.shields.io/badge/Semgrep_CE-security-success)](./.semgrep.yml)
 
